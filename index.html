@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTG Inventory Manager</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1>🃏 MTG Inventory Manager</h1>
+                <div class="subtitle">Track your inventory, sales, and profits all in one place</div>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="exportInventory()">📥 Export Inventory</button>
+                <button class="btn btn-secondary" onclick="exportTCGplayer()">📤 Export TCGplayer</button>
+                <button class="btn btn-warning" onclick="exportSoldCards()">💳 Export Sold Cards</button>
+                <button class="btn btn-secondary" onclick="toggleDebug()">🐛 Toggle Debug</button>
+                <button class="btn btn-danger" onclick="confirmClearAll()">🗑️ Clear All Data</button>
+            </div>
+        </div>
+        
+        <!-- Storage Warning -->
+        <div class="storage-warning" id="storageWarning">
+            ⚠️ Local storage is not available. Your data will only be kept in memory.
+        </div>
+        
+        <!-- Dashboard -->
+        <div class="dashboard">
+            <div class="dash-card green">
+                <div class="number" id="totalCards">0</div>
+                <div class="label">📦 Total Cards in Stock</div>
+            </div>
+            <div class="dash-card blue">
+                <div class="number" id="uniqueCards">0</div>
+                <div class="label">🃏 Unique Cards</div>
+            </div>
+            <div class="dash-card purple">
+                <div class="number" id="totalValue">$0.00</div>
+                <div class="label">💰 Total Inventory Value</div>
+            </div>
+            <div class="dash-card yellow">
+                <div class="number" id="totalSold">0</div>
+                <div class="label">💳 Total Sold</div>
+            </div>
+            <div class="dash-card red">
+                <div class="number" id="totalProfit">$0.00</div>
+                <div class="label">📈 Total Profit</div>
+            </div>
+        </div>
+        
+        <!-- Aging Report -->
+        <div class="panel">
+            <h3>📊 Inventory Aging</h3>
+            <div class="aging-grid">
+                <div class="aging-item">
+                    <span class="label">🟢 New (0-7 days)</span>
+                    <span class="value" id="agingNew">0</span>
+                </div>
+                <div class="aging-item">
+                    <span class="label">🟡 Recent (8-30 days)</span>
+                    <span class="value" id="agingRecent">0</span>
+                </div>
+                <div class="aging-item">
+                    <span class="label">🟠 Medium (31-90 days)</span>
+                    <span class="value" id="agingMedium">0</span>
+                </div>
+                <div class="aging-item">
+                    <span class="label">🔶 Old (91-180 days)</span>
+                    <span class="value" id="agingOld">0</span>
+                </div>
+                <div class="aging-item">
+                    <span class="label">🔴 Very Old (180+ days)</span>
+                    <span class="value" id="agingVeryOld">0</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Grid -->
+        <div class="main-grid">
+            <!-- Left: Add/Import -->
+            <div class="panel">
+                <h3>📥 Add Inventory</h3>
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: #4a5a6e; font-size: 0.9em; margin-bottom: 10px;">Quick Add Single Card</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Card Name *</label>
+                            <input type="text" id="cardName" placeholder="e.g. Sol Ring">
+                        </div>
+                        <div class="form-group">
+                            <label>Quantity *</label>
+                            <input type="number" id="cardQty" value="1" min="1">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Set</label>
+                            <input type="text" id="cardSet" placeholder="e.g. Commander Legends">
+                        </div>
+                        <div class="form-group">
+                            <label>Condition</label>
+                            <select id="cardCondition">
+                                <option value="Near Mint">Near Mint</option>
+                                <option value="Lightly Played">Lightly Played</option>
+                                <option value="Moderately Played">Moderately Played</option>
+                                <option value="Heavily Played">Heavily Played</option>
+                                <option value="Damaged">Damaged</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Cost (what you paid)</label>
+                            <input type="number" id="cardCost" step="0.01" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label>Sell Price</label>
+                            <input type="number" id="cardSellPrice" step="0.01" placeholder="0.00">
+                        </div>
+                    </div>
+                    <button class="btn btn-success" onclick="addCardFromForm()">➕ Add Card</button>
+                </div>
+                
+                <hr>
+                
+                <div class="import-section">
+                    <div class="section-title"><span class="icon">📂</span> Import Inventory CSV</div>
+                    <div class="drop-zone" id="dropZone" onclick="document.getElementById('bulkFile').click()">
+                        <div>Drop CSV file here or click to browse</div>
+                        <div style="font-size: 0.8em; margin-top: 5px;">TCGplayer export format</div>
+                        <input type="file" id="bulkFile" accept=".csv,.txt">
+                    </div>
+                    <div id="fileInfo" class="file-info" style="display:none;"></div>
+                    <div class="quick-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('bulkFile').click()">📂 Browse</button>
+                        <button class="btn btn-primary btn-sm" onclick="importTCGplayerFile()">📥 Import</button>
+                    </div>
+                </div>
+                
+                <div class="import-section sold">
+                    <div class="section-title"><span class="icon">💳</span> Import Sold Cards CSV</div>
+                    <div class="drop-zone" id="soldDropZone" onclick="document.getElementById('soldFile').click()">
+                        <div>Drop CSV file here or click to browse</div>
+                        <div style="font-size: 0.8em; margin-top: 5px;">Store export format</div>
+                        <input type="file" id="soldFile" accept=".csv,.txt">
+                    </div>
+                    <div id="soldFileInfo" class="file-info" style="display:none;"></div>
+                    <div class="quick-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('soldFile').click()">📂 Browse</button>
+                        <button class="btn btn-danger btn-sm" onclick="importSoldFile()">💳 Import Sold</button>
+                    </div>
+                    <div id="soldImportStatus" class="import-status"></div>
+                </div>
+                
+                <div style="margin-top: 10px;">
+                    <label style="color: #4a5a6e; font-size: 0.85em; font-weight: 600;">Or paste a decklist:</label>
+                    <textarea id="bulkDecklist" rows="3" placeholder="1 Sol Ring&#10;4 Lightning Bolt&#10;2 Counterspell"></textarea>
+                    <button class="btn btn-primary" onclick="importDecklist()" style="margin-top: 8px;">📥 Import Decklist</button>
+                </div>
+                
+                <div id="importStatus" class="import-status"></div>
+            </div>
+            
+            <!-- Middle: Sell/Adjust -->
+            <div class="panel">
+                <h3>💳 Sell / Adjust Inventory</h3>
+                <div class="form-group">
+                    <label>Find Card</label>
+                    <input type="text" id="sellSearch" placeholder="Search for card to sell..." oninput="renderSellList(this.value)">
+                </div>
+                <div id="sellList" class="sell-list-container">
+                    <div style="color: #6b7a8f; text-align: center; padding: 20px;">Search for a card to sell</div>
+                </div>
+                <div class="sell-selected">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Selected Card</label>
+                            <input type="text" id="selectedCard" readonly class="card-name">
+                        </div>
+                        <div class="form-group">
+                            <label>Quantity to Sell</label>
+                            <input type="number" id="sellQty" value="1" min="1">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Sell Price (optional)</label>
+                        <input type="number" id="sellPrice" step="0.01" placeholder="Amount sold for">
+                    </div>
+                    <button class="btn btn-primary" onclick="sellCardFromForm()">💳 Sell Card(s)</button>
+                    <button class="btn btn-secondary" onclick="adjustQuantity()" style="margin-left: 8px;">🔄 Adjust Quantity</button>
+                </div>
+            </div>
+            
+            <!-- Right: Quick Stats -->
+            <div class="panel">
+                <h3>📊 Quick Stats</h3>
+                <div style="margin-bottom: 15px;">
+                    <div style="color: #4a5a6e; font-size: 0.85em; margin-bottom: 8px; font-weight: 600;">Most Valuable Cards</div>
+                    <div id="topCards" style="font-size: 0.9em;">
+                        <div style="color: #6b7a8f; text-align: center; padding: 10px;">Add cards to see stats</div>
+                    </div>
+                </div>
+                <hr>
+                <div>
+                    <div style="color: #4a5a6e; font-size: 0.85em; margin-bottom: 8px; font-weight: 600;">Recent Sales</div>
+                    <div id="recentSales" style="font-size: 0.85em; max-height: 200px; overflow-y: auto;">
+                        <div style="color: #6b7a8f; text-align: center; padding: 10px;">No sales yet</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Inventory Table -->
+        <div class="panel">
+            <h3>📋 Current Inventory <span class="badge" id="inventoryCount">0 cards</span></h3>
+            <div class="search-bar">
+                <input type="text" id="tableSearch" placeholder="🔍 Search inventory...">
+                <select id="filterCondition">
+                    <option value="">All Conditions</option>
+                    <option value="Near Mint">Near Mint</option>
+                    <option value="Lightly Played">Lightly Played</option>
+                    <option value="Moderately Played">Moderately Played</option>
+                    <option value="Heavily Played">Heavily Played</option>
+                    <option value="Damaged">Damaged</option>
+                </select>
+                <select id="filterStock">
+                    <option value="">All Stock</option>
+                    <option value="in">In Stock</option>
+                    <option value="low">Low Stock (&lt; 3)</option>
+                    <option value="out">Out of Stock</option>
+                </select>
+                <select id="filterAge">
+                    <option value="">All Ages</option>
+                    <option value="7">Added in last 7 days</option>
+                    <option value="30">Added in last 30 days</option>
+                    <option value="90">Added in last 90 days</option>
+                    <option value="old">Added over 90 days ago</option>
+                    <option value="veryold">Added over 180 days ago</option>
+                </select>
+                <button class="btn btn-secondary btn-sm" onclick="renderAll()">🔄 Refresh</button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Card</th>
+                            <th>Set</th>
+                            <th>Condition</th>
+                            <th>Qty</th>
+                            <th>Cost</th>
+                            <th>Sell Price</th>
+                            <th>Age</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventoryTableBody">
+                        <tr><td colspan="8" style="text-align:center; padding: 30px; color: #6b7a8f;">No cards loaded</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Transaction Log -->
+        <div class="panel" style="margin-top: 20px;">
+            <h3>📜 Transaction Log <span class="badge" id="logCount">0 transactions</span></h3>
+            <div class="transaction-log" id="transactionLog">
+                <div style="color: #6b7a8f; text-align: center; padding: 20px;">No transactions yet</div>
+            </div>
+        </div>
+
+        <!-- Debug Console -->
+        <div class="panel" style="margin-top: 20px;" id="debugPanel">
+            <h3>🐛 Debug Console <span class="badge blue" id="debugCount">0 messages</span>
+                <button class="toggle-debug-btn" onclick="clearDebug()">🗑️ Clear</button>
+            </h3>
+            <div class="debug-console" id="debugConsole">
+                <div class="info">⏳ Waiting for action...</div>
+            </div>
+        </div>
+    </div>
+    
+<!-- Bulk Review Panel -->
+<div class="panel" style="margin-top: 20px;">
+    <h3>🔍 Bulk Sale Review 
+        <span class="badge" id="bulkCount">0</span>
+        <span style="font-size: 0.7em; color: #6b7a8f; font-weight: normal; margin-left: 10px;">
+            (Sales over threshold that need matching)
+        </span>
+    </h3>
+    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; background: #f8fafc; padding: 10px 15px; border-radius: 8px;">
+        <label style="color: #4a5a6e; font-size: 0.9em; font-weight: 600;">Minimum amount to show:</label>
+        <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 200px;">
+            <span style="font-size: 0.85em; color: #6b7a8f;">$0</span>
+            <input type="range" id="bulkThreshold" min="0" max="50" value="5" step="0.50" 
+                   style="flex: 1; accent-color: #1a56db;"
+                   oninput="updateBulkThresholdDisplay()">
+            <span style="font-size: 0.85em; color: #6b7a8f;">$50+</span>
+        </div>
+        <span style="font-weight: 600; color: #1a56db; min-width: 50px;" id="bulkThresholdDisplay">$5.00</span>
+        <button class="btn btn-secondary btn-sm" onclick="updateBulkThreshold()">Apply</button>
+        <button class="btn btn-secondary btn-sm" onclick="refreshBulkReview()">🔄 Refresh</button>
+    </div>
+    <div id="bulkReviewContainer">
+        <div style="color: #6b7a8f; text-align: center; padding: 20px;">
+            Loading bulk sales...
+        </div>
+    </div>
+</div>
+
+    <!-- Modal for editing -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <h2>✏️ Edit Card</h2>
+            <div class="form-group">
+                <label>Card Name</label>
+                <input type="text" id="editName" readonly>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Quantity</label>
+                    <input type="number" id="editQty" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Condition</label>
+                    <select id="editCondition">
+                        <option value="Near Mint">Near Mint</option>
+                        <option value="Lightly Played">Lightly Played</option>
+                        <option value="Moderately Played">Moderately Played</option>
+                        <option value="Heavily Played">Heavily Played</option>
+                        <option value="Damaged">Damaged</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Cost (what you paid)</label>
+                    <input type="number" id="editCost" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Sell Price</label>
+                    <input type="number" id="editSellPrice" step="0.01">
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-success" onclick="saveEdit()">💾 Save</button>
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/utils.js"></script>
+    <script src="js/inventory.js"></script>
+    <script src="js/imports.js"></script>
+    <script src="js/exports.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
